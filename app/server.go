@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 )
@@ -24,6 +26,18 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		conn.Write([]byte("+PONG\r\n"))
+		buff := make([]byte, 1024)
+
+		for {
+			// Read request msg from the client
+			if _, err := conn.Read(buff); errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				fmt.Println("Error reading from connection: ", err.Error())
+				conn.Close()
+			}
+			// Send response to the client
+			conn.Write([]byte("+PONG\r\n"))
+		}
 	}
 }
