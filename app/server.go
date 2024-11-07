@@ -8,10 +8,6 @@ import (
 	"os"
 )
 
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
-
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 
@@ -26,18 +22,24 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		buff := make([]byte, 1024)
 
-		for {
-			// Read request msg from the client
-			if _, err := conn.Read(buff); errors.Is(err, io.EOF) {
-				break
-			} else if err != nil {
-				fmt.Println("Error reading from connection: ", err.Error())
-				conn.Close()
-			}
-			// Send response to the client
-			conn.Write([]byte("+PONG\r\n"))
+		go handleConnection(conn)
+	}
+}
+
+// Handle Connected Clients
+func handleConnection(conn net.Conn) {
+	buff := make([]byte, 1024)
+
+	for {
+		// Read request msg from the client
+		if _, err := conn.Read(buff); errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
+			fmt.Println("Error reading from connection: ", err.Error())
+			conn.Close()
 		}
+		// Send response to the client
+		conn.Write([]byte("+PONG\r\n"))
 	}
 }
