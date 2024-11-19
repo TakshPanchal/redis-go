@@ -36,7 +36,7 @@ func (d *RESPDecoder) Decode() (interface{}, error) {
 	t := make([]byte, 1)
 	_, err := d.Reader.Read(t)
 	if err != nil {
-		fmt.Printf("Error while reading the type: %v", err)
+		fmt.Printf("Error while reading the type: %v\n", err)
 		return nil, err
 	}
 	switch t[0] {
@@ -58,21 +58,18 @@ func (d *RESPDecoder) DecodeArray() (Array, error) {
 	fmt.Printf("Size of the Array: %d\n", s)
 
 	arr := make(Array, 0)
-	cnt := 0
-	for {
+	for _ = range s {
 		elem, err := d.Decode()
+
 		if err != nil {
 			if err == io.EOF {
 				break
+			} else {
+				fmt.Printf("Error in decoding: %v\n", err)
+				return nil, err
 			}
-			return nil, err
 		}
 		arr = append(arr, elem)
-		cnt++
-	}
-
-	if cnt != s {
-		return nil, ErrInvalidEncoding
 	}
 
 	return arr, nil
@@ -128,4 +125,33 @@ func getLength(r io.Reader) (int, error) {
 	}
 
 	return strconv.Atoi(l)
+}
+
+type RESPEncoder struct {
+	Writer io.Writer
+}
+
+func (e *RESPEncoder) Encode(val interface{}) error {
+	switch v := val.(type) {
+	case []byte:
+		// ByteString
+		bs := make([]byte, 0)
+		bs = append(bs, '$')
+		bs = append(bs, []byte(strconv.Itoa(len(v)))...)
+		bs = append(bs, CRLF...)
+		bs = append(bs, v...)
+		bs = append(bs, CRLF...)
+
+		_, err := e.Writer.Write(bs)
+		return err
+	case string:
+		s := "+"
+		s += v
+		s += string(CRLF)
+		_, err := e.Writer.Write([]byte(s))
+		return err
+	default:
+		return fmt.Errorf("%w: %v", ErrTypeNotSupported, v)
+
+	}
 }
